@@ -26,8 +26,6 @@ async function loadFiles() {
   const emptyEl = document.getElementById("lista-vazia");
   const errEl = document.getElementById("arquivos-erro");
   errEl.classList.add("d-none");
-  tbody.innerHTML =
-    '<tr><td colspan="6" class="text-center text-muted py-4">Carregando…</td></tr>';
   try {
     const list = await apiFetch("/api/files");
     tbody.innerHTML = "";
@@ -39,16 +37,32 @@ async function loadFiles() {
     emptyEl.classList.add("d-none");
     for (const f of list) {
       const tr = document.createElement("tr");
-      const link = f.url
-        ? `<a href="${f.url}" target="_blank" rel="noopener">Abrir</a>`
-        : "—";
+      const nomeArquivo = escapeHtml(f.original_name);
+      const nomeCelula = f.url
+        ? `<a href="${escapeAttr(f.url)}" target="_blank" rel="noopener">${nomeArquivo}</a>`
+        : nomeArquivo;
       tr.innerHTML = `
-        <td>${escapeHtml(f.original_name)}</td>
+        <td>${nomeCelula}</td>
         <td>${escapeHtml(f.content_type || "—")}</td>
         <td>${formatBytes(f.size)}</td>
         <td>${formatDate(f.create_at)}</td>
-        <td>${link}</td>
-        <td><code class="small user-select-all">${escapeHtml(f.secret_key)}</code></td>
+        <td><code class="small user-select-all">${escapeHtml(
+          String(f.secret_key).toUpperCase()
+        )}</code></td>
+        <td class="text-end">
+          <div class="d-inline-flex gap-1 justify-content-end">
+            <button type="button" class="btn btn-outline-primary btn-sm p-1 lh-1 btn-editar-arquivo"
+              title="Substituir arquivo" aria-label="Editar arquivo"
+              data-secret-key="${escapeAttr(f.secret_key)}" data-file-name="${escapeAttr(f.original_name)}">
+              ${ICON_LAPIS}
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm p-1 lh-1 btn-excluir-arquivo"
+              title="Excluir" aria-label="Excluir arquivo"
+              data-secret-key="${escapeAttr(f.secret_key)}" data-file-name="${escapeAttr(f.original_name)}">
+              ${ICON_LIXEIRA}
+            </button>
+          </div>
+        </td>
       `;
       tbody.appendChild(tr);
     }
@@ -70,6 +84,30 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+function escapeAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+const ICON_LIXEIRA = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>`;
+
+const ICON_LAPIS = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>`;
+
+let pendingDeleteSecretKey = null;
+let editingSecretKey = null;
+
+function resetModalUploadInclusao() {
+  editingSecretKey = null;
+  document.getElementById("modalUploadLabel").textContent = "Incluir arquivo";
+  const info = document.getElementById("upload-edit-info");
+  info.classList.add("d-none");
+  info.textContent = "";
+  const submitBtn = document.querySelector("#form-upload button[type='submit']");
+  if (submitBtn) submitBtn.textContent = "Salvar";
+}
+
 document.getElementById("btn-logout").addEventListener("click", () => {
   clearToken();
   window.location.href = "index.html";
@@ -80,11 +118,70 @@ document.getElementById("btn-refresh").addEventListener("click", () => {
 });
 
 const modalUpload = new bootstrap.Modal(document.getElementById("modalUpload"));
+const modalExcluirArquivo = new bootstrap.Modal(document.getElementById("modalExcluirArquivo"));
+const excluirArquivoAlertEl = document.getElementById("excluir-arquivo-alert");
+const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao");
+
+document.querySelector("#tabela-arquivos tbody").addEventListener("click", (e) => {
+  const btnEdit = e.target.closest(".btn-editar-arquivo");
+  if (btnEdit) {
+    editingSecretKey = btnEdit.dataset.secretKey;
+    document.getElementById("modalUploadLabel").textContent = "Substituir arquivo";
+    document.getElementById("form-upload").reset();
+    document.getElementById("upload-alert").classList.add("d-none");
+    const info = document.getElementById("upload-edit-info");
+    const nome = btnEdit.dataset.fileName || "este arquivo";
+    info.innerHTML = `Substituindo o arquivo <strong>${escapeHtml(nome)}</strong>. Escolha o novo arquivo e salve.`;
+    info.classList.remove("d-none");
+    const submitBtn = document.querySelector("#form-upload button[type='submit']");
+    if (submitBtn) submitBtn.textContent = "Substituir";
+    modalUpload.show();
+    return;
+  }
+  const btn = e.target.closest(".btn-excluir-arquivo");
+  if (!btn) return;
+  pendingDeleteSecretKey = btn.dataset.secretKey;
+  const nome = btn.dataset.fileName || "este arquivo";
+  excluirArquivoAlertEl.classList.remove("alert-danger");
+  excluirArquivoAlertEl.classList.add("alert-warning");
+  excluirArquivoAlertEl.innerHTML = `<strong>Atenção:</strong> deseja excluir <strong>${escapeHtml(nome)}</strong>? Esta ação não pode ser desfeita.`;
+  modalExcluirArquivo.show();
+});
+
+btnConfirmarExclusao.addEventListener("click", async () => {
+  if (!pendingDeleteSecretKey) return;
+  const key = pendingDeleteSecretKey;
+  btnConfirmarExclusao.disabled = true;
+  try {
+    const q = new URLSearchParams({ key });
+    await apiFetch(`/api/files?${q}`, { method: "DELETE" });
+    pendingDeleteSecretKey = null;
+    modalExcluirArquivo.hide();
+    await loadFiles();
+  } catch (err) {
+    excluirArquivoAlertEl.classList.remove("alert-warning");
+    excluirArquivoAlertEl.classList.add("alert-danger");
+    excluirArquivoAlertEl.innerHTML = escapeHtml(err.message || "Não foi possível excluir.");
+  } finally {
+    btnConfirmarExclusao.disabled = false;
+  }
+});
+
+document.getElementById("modalExcluirArquivo").addEventListener("hidden.bs.modal", () => {
+  pendingDeleteSecretKey = null;
+  excluirArquivoAlertEl.classList.remove("alert-danger");
+  excluirArquivoAlertEl.classList.add("alert-warning");
+});
 
 document.getElementById("btn-abrir-upload").addEventListener("click", () => {
+  resetModalUploadInclusao();
   document.getElementById("form-upload").reset();
   document.getElementById("upload-alert").classList.add("d-none");
   modalUpload.show();
+});
+
+document.getElementById("modalUpload").addEventListener("hidden.bs.modal", () => {
+  resetModalUploadInclusao();
 });
 
 document.getElementById("form-upload").addEventListener("submit", async (e) => {
@@ -103,10 +200,12 @@ document.getElementById("form-upload").addEventListener("submit", async (e) => {
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   try {
-    await apiFetch("/api/files/upload", {
-      method: "POST",
-      body: fd,
-    });
+    const key = editingSecretKey;
+    const path = key
+      ? `/api/files/upload?${new URLSearchParams({ key })}`
+      : "/api/files/upload";
+    const method = key ? "PUT" : "POST";
+    await apiFetch(path, { method, body: fd });
     modalUpload.hide();
     await loadFiles();
   } catch (err) {
