@@ -12,7 +12,7 @@ document.getElementById("form-cadastro").addEventListener("submit", async (e) =>
       method: "POST",
       body: JSON.stringify({ name, user_name, password }),
     });
-    window.location.href = "index.html?cadastro=ok";
+    window.location.href = `${FM.url("index.html")}?cadastro=ok`;
   } catch (err) {
     alertEl.textContent = err.message || "Não foi possível cadastrar.";
     alertEl.classList.remove("d-none");
