@@ -1,5 +1,5 @@
 if (getToken()) {
-  window.location.href = FM.url("app.html");
+  window.location.href = FM.url("pages/app.html");
 }
 
 document.getElementById("form-login").addEventListener("submit", async (e) => {
@@ -16,7 +16,7 @@ document.getElementById("form-login").addEventListener("submit", async (e) => {
       body: JSON.stringify({ username, password }),
     });
     setToken(data.access_token);
-    window.location.href = FM.url("app.html");
+    window.location.href = FM.url("pages/app.html");
   } catch (err) {
     alertEl.textContent = err.message || "Falha no login.";
     alertEl.classList.remove("d-none");

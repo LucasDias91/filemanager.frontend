@@ -40,7 +40,7 @@ document.getElementById("btn-refresh").addEventListener("click", () => {
 });
 
 const linkNovo = document.getElementById("fm-link-novo-usuario");
-if (linkNovo) linkNovo.href = FM.url("cadastro.html");
+if (linkNovo) linkNovo.href = FM.url("pages/cadastro.html");
 
 FM.requireAuth();
 loadUsers();

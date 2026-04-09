@@ -1,16 +1,20 @@
 /**
- * Utilitários e resolução de URLs (raiz vs pasta pages/).
+ * Utilitários e resolução de URLs (index na raiz; demais HTML em pages/).
  */
 const FM = {
-  pathPrefix() {
-    const p = window.location.pathname.replace(/\\/g, "/");
-    return p.includes("/pages/") ? "../" : "";
-  },
-
-  /** Caminho para um ficheiro HTML ou recurso relativo à raiz do frontend. */
+  /**
+   * Caminho para HTML: use caminho desde a raiz do frontend (ex.: index.html, pages/app.html).
+   * Dentro de pages/, links para outras páginas em pages/ ficam no mesmo diretório.
+   */
   url(path) {
     const p = String(path).replace(/^\//, "");
-    return this.pathPrefix() + p;
+    const inPages = window.location.pathname.replace(/\\/g, "/").includes("/pages/");
+    if (inPages) {
+      if (p === "index.html") return "../index.html";
+      if (p.startsWith("pages/")) return p.slice(6);
+      return "../" + p;
+    }
+    return p;
   },
 
   requireAuth() {

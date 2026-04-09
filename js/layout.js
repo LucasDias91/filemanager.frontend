@@ -8,8 +8,8 @@
     if (!root) return;
 
     const active = root.getAttribute("data-fm-nav") === "users" ? "users" : "files";
-    const appHref = FM.url("app.html");
-    const usuariosHref = FM.url("usuarios.html");
+    const appHref = FM.url("pages/app.html");
+    const usuariosHref = FM.url("pages/usuarios.html");
 
     root.className =
       "fm-content px-3 px-lg-4 d-flex flex-wrap align-items-center justify-content-between";
