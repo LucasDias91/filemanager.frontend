@@ -1,10 +1,13 @@
 async function loadUsers() {
   const tbody = document.querySelector("#tabela-usuarios tbody");
-  const emptyEl = document.getElementById("lista-vazia");
+  const emptyEl = document.getElementById("lista-vazia-usuarios");
   const errEl = document.getElementById("usuarios-erro");
+  if (!tbody || !emptyEl || !errEl) return;
+
   errEl.classList.add("d-none");
   try {
-    const list = await apiFetch("/api/users");
+    const raw = await apiFetch("/api/users");
+    const list = Array.isArray(raw) ? raw : [];
     tbody.innerHTML = "";
     if (!list.length) {
       emptyEl.classList.remove("d-none");
@@ -35,12 +38,11 @@ async function loadUsers() {
   }
 }
 
-document.getElementById("btn-refresh").addEventListener("click", () => {
+window.fmEnterUsersView = function fmEnterUsersView() {
+  if (!FM.requireAuth()) return;
+  loadUsers();
+};
+
+document.getElementById("btn-refresh-usuarios")?.addEventListener("click", () => {
   loadUsers();
 });
-
-const linkNovo = document.getElementById("fm-link-novo-usuario");
-if (linkNovo) linkNovo.href = FM.url("pages/cadastro.html");
-
-FM.requireAuth();
-loadUsers();

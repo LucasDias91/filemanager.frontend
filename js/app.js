@@ -5,27 +5,44 @@ const ICON_LAPIS = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="1
 let pendingDeleteSecretKey = null;
 let editingSecretKey = null;
 
+function fmGetModalUpload() {
+  const el = document.getElementById("modalUpload");
+  if (!el || typeof bootstrap === "undefined") return null;
+  return bootstrap.Modal.getOrCreateInstance(el);
+}
+
+function fmGetModalExcluirArquivo() {
+  const el = document.getElementById("modalExcluirArquivo");
+  if (!el || typeof bootstrap === "undefined") return null;
+  return bootstrap.Modal.getOrCreateInstance(el);
+}
+
 function resetModalUploadInclusao() {
   editingSecretKey = null;
-  document.getElementById("modalUploadLabel").textContent = "Incluir arquivo";
+  const label = document.getElementById("modalUploadLabel");
+  if (label) label.textContent = "Incluir arquivo";
   const info = document.getElementById("upload-edit-info");
-  info.classList.add("d-none");
-  info.textContent = "";
+  if (info) {
+    info.classList.add("d-none");
+    info.textContent = "";
+  }
   const submitBtn = document.querySelector("#form-upload button[type='submit']");
   if (submitBtn) submitBtn.textContent = "Salvar";
 }
 
 async function loadFiles() {
   const tbody = document.querySelector("#tabela-arquivos tbody");
-  const emptyEl = document.getElementById("lista-vazia");
+  const emptyEl = document.getElementById("lista-vazia-arquivos");
   const errEl = document.getElementById("arquivos-erro");
+  if (!tbody || !emptyEl || !errEl) return;
+
   errEl.classList.add("d-none");
   try {
-    const list = await apiFetch("/api/files");
+    const raw = await apiFetch("/api/files");
+    const list = Array.isArray(raw) ? raw : [];
     tbody.innerHTML = "";
     if (!list.length) {
       emptyEl.classList.remove("d-none");
-      tbody.innerHTML = "";
       return;
     }
     emptyEl.classList.add("d-none");
@@ -69,16 +86,19 @@ async function loadFiles() {
   }
 }
 
-document.getElementById("btn-refresh").addEventListener("click", () => {
+window.fmEnterFilesView = function fmEnterFilesView() {
+  if (!FM.requireAuth()) return;
+  loadFiles();
+};
+
+document.getElementById("btn-refresh-arquivos")?.addEventListener("click", () => {
   loadFiles();
 });
 
-const modalUpload = new bootstrap.Modal(document.getElementById("modalUpload"));
-const modalExcluirArquivo = new bootstrap.Modal(document.getElementById("modalExcluirArquivo"));
 const excluirArquivoAlertEl = document.getElementById("excluir-arquivo-alert");
 const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao");
 
-document.querySelector("#tabela-arquivos tbody").addEventListener("click", (e) => {
+document.querySelector("#tabela-arquivos tbody")?.addEventListener("click", (e) => {
   const btnEdit = e.target.closest(".btn-editar-arquivo");
   if (btnEdit) {
     editingSecretKey = btnEdit.dataset.secretKey;
@@ -87,24 +107,26 @@ document.querySelector("#tabela-arquivos tbody").addEventListener("click", (e) =
     document.getElementById("upload-alert").classList.add("d-none");
     const info = document.getElementById("upload-edit-info");
     const nome = btnEdit.dataset.fileName || "este arquivo";
-    info.innerHTML = `Substituindo o arquivo <strong>${FM.escapeHtml(nome)}</strong>. Escolha o novo arquivo e salve.`;
-    info.classList.remove("d-none");
+    if (info) {
+      info.innerHTML = `Substituindo o arquivo <strong>${FM.escapeHtml(nome)}</strong>. Escolha o novo arquivo e salve.`;
+      info.classList.remove("d-none");
+    }
     const submitBtn = document.querySelector("#form-upload button[type='submit']");
     if (submitBtn) submitBtn.textContent = "Substituir";
-    modalUpload.show();
+    fmGetModalUpload()?.show();
     return;
   }
   const btn = e.target.closest(".btn-excluir-arquivo");
-  if (!btn) return;
+  if (!btn || !excluirArquivoAlertEl) return;
   pendingDeleteSecretKey = btn.dataset.secretKey;
   const nome = btn.dataset.fileName || "este arquivo";
   excluirArquivoAlertEl.classList.remove("alert-danger");
   excluirArquivoAlertEl.classList.add("alert-warning");
   excluirArquivoAlertEl.innerHTML = `<strong>Atenção:</strong> deseja excluir <strong>${FM.escapeHtml(nome)}</strong>? Esta ação não pode ser desfeita.`;
-  modalExcluirArquivo.show();
+  fmGetModalExcluirArquivo()?.show();
 });
 
-btnConfirmarExclusao.addEventListener("click", async () => {
+btnConfirmarExclusao?.addEventListener("click", async () => {
   if (!pendingDeleteSecretKey) return;
   const key = pendingDeleteSecretKey;
   btnConfirmarExclusao.disabled = true;
@@ -112,36 +134,41 @@ btnConfirmarExclusao.addEventListener("click", async () => {
     const q = new URLSearchParams({ key });
     await apiFetch(`/api/files?${q}`, { method: "DELETE" });
     pendingDeleteSecretKey = null;
-    modalExcluirArquivo.hide();
+    fmGetModalExcluirArquivo()?.hide();
     await loadFiles();
   } catch (err) {
-    excluirArquivoAlertEl.classList.remove("alert-warning");
-    excluirArquivoAlertEl.classList.add("alert-danger");
-    excluirArquivoAlertEl.innerHTML = FM.escapeHtml(err.message || "Não foi possível excluir.");
+    if (excluirArquivoAlertEl) {
+      excluirArquivoAlertEl.classList.remove("alert-warning");
+      excluirArquivoAlertEl.classList.add("alert-danger");
+      excluirArquivoAlertEl.innerHTML = FM.escapeHtml(err.message || "Não foi possível excluir.");
+    }
   } finally {
     btnConfirmarExclusao.disabled = false;
   }
 });
 
-document.getElementById("modalExcluirArquivo").addEventListener("hidden.bs.modal", () => {
+document.getElementById("modalExcluirArquivo")?.addEventListener("hidden.bs.modal", () => {
   pendingDeleteSecretKey = null;
-  excluirArquivoAlertEl.classList.remove("alert-danger");
-  excluirArquivoAlertEl.classList.add("alert-warning");
+  if (excluirArquivoAlertEl) {
+    excluirArquivoAlertEl.classList.remove("alert-danger");
+    excluirArquivoAlertEl.classList.add("alert-warning");
+  }
 });
 
-document.getElementById("btn-abrir-upload").addEventListener("click", () => {
+document.getElementById("btn-abrir-upload")?.addEventListener("click", () => {
   resetModalUploadInclusao();
   document.getElementById("form-upload").reset();
   document.getElementById("upload-alert").classList.add("d-none");
-  modalUpload.show();
+  fmGetModalUpload()?.show();
 });
 
-document.getElementById("modalUpload").addEventListener("hidden.bs.modal", () => {
+document.getElementById("modalUpload")?.addEventListener("hidden.bs.modal", () => {
   resetModalUploadInclusao();
 });
 
-document.getElementById("form-upload").addEventListener("submit", async (e) => {
+document.getElementById("form-upload")?.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const form = e.currentTarget;
   const alertEl = document.getElementById("upload-alert");
   alertEl.classList.add("d-none");
   const input = document.getElementById("arquivo");
@@ -153,8 +180,8 @@ document.getElementById("form-upload").addEventListener("submit", async (e) => {
   const file = input.files[0];
   const fd = new FormData();
   fd.append("file", file, file.name);
-  const btn = e.target.querySelector('button[type="submit"]');
-  btn.disabled = true;
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn) btn.disabled = true;
   try {
     const key = editingSecretKey;
     const path = key
@@ -162,15 +189,12 @@ document.getElementById("form-upload").addEventListener("submit", async (e) => {
       : "/api/files/upload";
     const method = key ? "PUT" : "POST";
     await apiFetch(path, { method, body: fd });
-    modalUpload.hide();
+    fmGetModalUpload()?.hide();
     await loadFiles();
   } catch (err) {
     alertEl.textContent = err.message || "Falha no envio.";
     alertEl.classList.remove("d-none");
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 });
-
-FM.requireAuth();
-loadFiles();

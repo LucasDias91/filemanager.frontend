@@ -1,31 +1,90 @@
 /**
- * Utilitários e resolução de URLs (index na raiz; demais HTML em pages/).
+ * Utilitários e SPA: troca de views sem alterar a URL.
  */
 const FM = {
-  /**
-   * Caminho para HTML: use caminho desde a raiz do frontend (ex.: index.html, pages/app.html).
-   * Dentro de pages/, links para outras páginas em pages/ ficam no mesmo diretório.
-   */
-  url(path) {
-    const p = String(path).replace(/^\//, "");
-    const inPages = window.location.pathname.replace(/\\/g, "/").includes("/pages/");
-    if (inPages) {
-      if (p === "index.html") return "../index.html";
-      if (p.startsWith("pages/")) return p.slice(6);
-      return "../" + p;
+  showView(name) {
+    const authShell = document.getElementById("fm-shell-auth");
+    const appShell = document.getElementById("fm-shell-app");
+    const viewLogin = document.getElementById("fm-view-login");
+    const viewCadastro = document.getElementById("fm-view-cadastro");
+    const mainFiles = document.getElementById("fm-view-files-main");
+    const mainUsers = document.getElementById("fm-view-users-main");
+    if (!authShell || !appShell || !viewLogin || !viewCadastro || !mainFiles || !mainUsers) return;
+
+    if (name === "login" || name === "cadastro") {
+      if (name === "login" && typeof getToken === "function" && getToken()) {
+        this.showView("files");
+        return;
+      }
+      authShell.classList.remove("d-none");
+      appShell.classList.add("d-none");
+      document.body.className = "fm-auth d-flex align-items-center py-5";
+      viewLogin.classList.toggle("d-none", name !== "login");
+      viewCadastro.classList.toggle("d-none", name !== "cadastro");
+      document.title = name === "login" ? "Entrar — FileManager" : "Cadastro — FileManager";
+      return;
     }
-    return p;
+
+    if (name === "files" || name === "users") {
+      if (typeof getToken !== "function" || !getToken()) {
+        this.showView("login");
+        return;
+      }
+      authShell.classList.add("d-none");
+      appShell.classList.remove("d-none");
+      document.body.className = "fm-app-body";
+      mainFiles.classList.toggle("d-none", name !== "files");
+      mainUsers.classList.toggle("d-none", name !== "users");
+      document.title =
+        name === "files" ? "Arquivos — FileManager" : "Usuários — FileManager";
+      if (typeof FM.renderNavbar === "function") {
+        FM.renderNavbar(name === "users" ? "users" : "files");
+      }
+      if (name === "files" && typeof window.fmEnterFilesView === "function") {
+        window.fmEnterFilesView();
+      }
+      if (name === "users" && typeof window.fmEnterUsersView === "function") {
+        window.fmEnterUsersView();
+      }
+    }
+  },
+
+  /** Após cadastro bem-sucedido: volta ao login e exibe aviso. */
+  goLoginAfterRegister() {
+    const success = document.getElementById("login-success");
+    if (success) success.classList.remove("d-none");
+    this.showView("login");
+  },
+
+  initApp() {
+    document.body.addEventListener("click", (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const el = t.closest("[data-fm-go]");
+      if (!el) return;
+      e.preventDefault();
+      const go = el.getAttribute("data-fm-go");
+      if (go === "login" || go === "cadastro" || go === "files" || go === "users") {
+        this.showView(go);
+      }
+    });
+    if (typeof getToken === "function" && getToken()) {
+      this.showView("files");
+    } else {
+      this.showView("login");
+    }
   },
 
   requireAuth() {
-    if (typeof getToken !== "function" || getToken()) return;
-    window.location.href = this.url("index.html");
+    if (typeof getToken !== "function" || getToken()) return true;
+    this.showView("login");
+    return false;
   },
 
   redirectOnUnauthorized(err) {
     if (!err || err.status !== 401) return false;
     if (typeof clearToken === "function") clearToken();
-    window.location.href = this.url("index.html");
+    this.showView("login");
     return true;
   },
 
@@ -34,7 +93,9 @@ const FM = {
     if (!btn) return;
     btn.addEventListener("click", () => {
       if (typeof clearToken === "function") clearToken();
-      window.location.href = this.url("index.html");
+      const success = document.getElementById("login-success");
+      if (success) success.classList.add("d-none");
+      this.showView("login");
     });
   },
 
