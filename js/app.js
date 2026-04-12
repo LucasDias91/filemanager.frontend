@@ -2,6 +2,21 @@ const ICON_LIXEIRA = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height=
 
 const ICON_LAPIS = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16" aria-hidden="true"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>`;
 
+const ICON_DOWNLOAD = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>`;
+
+function fmDownloadBySecretKey(secretKey) {
+  if (!secretKey || typeof CONFIG === "undefined") return;
+  const url = `${CONFIG.API_BASE_URL}/api/files/download?${new URLSearchParams({ key: secretKey })}`;
+  const a = document.createElement("a");
+  a.href = url;
+  a.rel = "noopener";
+  a.target = "_blank";
+  a.setAttribute("download", "");
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 let pendingDeleteSecretKey = null;
 let editingSecretKey = null;
 
@@ -62,6 +77,11 @@ async function loadFiles() {
         )}</code></td>
         <td class="text-end">
           <div class="d-inline-flex gap-1 justify-content-end">
+            <button type="button" class="btn btn-outline-secondary btn-sm p-1 lh-1 btn-baixar-arquivo"
+              title="Baixar arquivo" aria-label="Baixar arquivo"
+              data-secret-key="${FM.escapeAttr(f.secret_key)}">
+              ${ICON_DOWNLOAD}
+            </button>
             <button type="button" class="btn btn-outline-primary btn-sm p-1 lh-1 btn-editar-arquivo"
               title="Substituir arquivo" aria-label="Editar arquivo"
               data-secret-key="${FM.escapeAttr(f.secret_key)}" data-file-name="${FM.escapeAttr(f.original_name)}">
@@ -99,31 +119,14 @@ const excluirArquivoAlertEl = document.getElementById("excluir-arquivo-alert");
 const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao");
 
 document.querySelector("#tabela-arquivos tbody")?.addEventListener("click", (e) => {
+  const btnBaixar = e.target.closest(".btn-baixar-arquivo");
   const btnEdit = e.target.closest(".btn-editar-arquivo");
-  if (btnEdit) {
-    editingSecretKey = btnEdit.dataset.secretKey;
-    document.getElementById("modalUploadLabel").textContent = "Substituir arquivo";
-    document.getElementById("form-upload").reset();
-    document.getElementById("upload-alert").classList.add("d-none");
-    const info = document.getElementById("upload-edit-info");
-    const nome = btnEdit.dataset.fileName || "este arquivo";
-    if (info) {
-      info.innerHTML = `Substituindo o arquivo <strong>${FM.escapeHtml(nome)}</strong>. Escolha o novo arquivo e salve.`;
-      info.classList.remove("d-none");
-    }
-    const submitBtn = document.querySelector("#form-upload button[type='submit']");
-    if (submitBtn) submitBtn.textContent = "Substituir";
-    fmGetModalUpload()?.show();
+  const btnExcluir = e.target.closest(".btn-excluir-arquivo");
+  const acaoDownload = btnBaixar || btnEdit || btnExcluir;
+  if (acaoDownload) {
+    fmDownloadBySecretKey(acaoDownload.dataset.secretKey);
     return;
   }
-  const btn = e.target.closest(".btn-excluir-arquivo");
-  if (!btn || !excluirArquivoAlertEl) return;
-  pendingDeleteSecretKey = btn.dataset.secretKey;
-  const nome = btn.dataset.fileName || "este arquivo";
-  excluirArquivoAlertEl.classList.remove("alert-danger");
-  excluirArquivoAlertEl.classList.add("alert-warning");
-  excluirArquivoAlertEl.innerHTML = `<strong>Atenção:</strong> deseja excluir <strong>${FM.escapeHtml(nome)}</strong>? Esta ação não pode ser desfeita.`;
-  fmGetModalExcluirArquivo()?.show();
 });
 
 btnConfirmarExclusao?.addEventListener("click", async () => {
