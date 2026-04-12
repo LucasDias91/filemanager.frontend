@@ -64,8 +64,9 @@ async function loadFiles() {
     for (const f of list) {
       const tr = document.createElement("tr");
       const nomeArquivo = FM.escapeHtml(f.original_name);
-      const nomeCelula = f.url
-        ? `<a href="${FM.escapeAttr(f.url)}" target="_blank" rel="noopener">${nomeArquivo}</a>`
+      const openUrl = FM.absoluteApiUrl(f.relative_url || f.url || "");
+      const nomeCelula = openUrl
+        ? `<a href="${FM.escapeAttr(openUrl)}" target="_blank" rel="noopener noreferrer">${nomeArquivo}</a>`
         : nomeArquivo;
       tr.innerHTML = `
         <td>${nomeCelula}</td>

@@ -128,4 +128,21 @@ const FM = {
     const i = Math.floor(Math.log(n) / Math.log(k));
     return `${parseFloat((n / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   },
+
+  /**
+   * URL absoluta do backend (ex.: arquivo em /storage/…) usando CONFIG.API_BASE_URL.
+   * Aceita path começando com "/" ou URL já http(s).
+   */
+  absoluteApiUrl(pathOrFull) {
+    if (!pathOrFull) return "";
+    const s = String(pathOrFull).trim();
+    if (/^https?:\/\//i.test(s)) return s;
+    const base =
+      typeof CONFIG !== "undefined" && CONFIG.API_BASE_URL
+        ? String(CONFIG.API_BASE_URL).replace(/\/$/, "")
+        : "";
+    if (!base) return s.startsWith("/") ? s : `/${s}`;
+    const path = s.startsWith("/") ? s : `/${s}`;
+    return `${base}${path}`;
+  },
 };
