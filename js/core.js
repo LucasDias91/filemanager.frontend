@@ -1,6 +1,3 @@
-/**
- * Utilitários e SPA: troca de views sem alterar a URL.
- */
 const FM = {
   showView(name) {
     const authShell = document.getElementById("fm-shell-auth");
@@ -49,7 +46,6 @@ const FM = {
     }
   },
 
-  /** Após cadastro bem-sucedido: volta ao login e exibe aviso. */
   goLoginAfterRegister() {
     const success = document.getElementById("login-success");
     if (success) success.classList.remove("d-none");
@@ -129,10 +125,6 @@ const FM = {
     return `${parseFloat((n / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   },
 
-  /**
-   * URL absoluta do backend (ex.: arquivo em /storage/…) usando CONFIG.API_BASE_URL.
-   * Aceita path começando com "/" ou URL já http(s).
-   */
   absoluteApiUrl(pathOrFull) {
     if (!pathOrFull) return "";
     const s = String(pathOrFull).trim();

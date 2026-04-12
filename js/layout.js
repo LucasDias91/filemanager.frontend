@@ -1,6 +1,3 @@
-/**
- * Navbar das views autenticadas (Arquivos / Usuários). SPA: sem mudar a URL.
- */
 FM.renderNavbar = function renderNavbar(active) {
   const root = document.getElementById("fm-navbar-root");
   if (!root) return;
