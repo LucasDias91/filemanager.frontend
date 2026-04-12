@@ -1,35 +1,40 @@
 # FileManager — Frontend
 
-SPA em **um único** `index.html`: login, cadastro, arquivos e usuários trocam só o conteúdo na tela. **A URL do navegador não muda** (sempre a mesma página, por exemplo `http://127.0.0.1:5500/` ou `.../index.html`).
+SPA num único **`index.html`**: login, cadastro, arquivos e utilizadores. A URL do navegador não muda (ex.: `http://127.0.0.1:5500/`).
 
-## Como iniciar a aplicação
+A API FastAPI deve estar em execução antes de usar o site (ver **`filemanager.backend/README.md`** — `start.bat` ou execução manual do Uvicorn).
 
-1. **Suba o backend** na porta **8000** (pasta `filemanager.backend`, comando `uvicorn` — veja o README do backend).
-2. **Nesta pasta do frontend**, no **Windows**, dê dois cliques em **`start.bat`** ou execute no terminal:
+## Início rápido com `start.bat` (Windows)
 
-   ```bat
-   start.bat
-   ```
+Na pasta deste projeto (`filemanager.frontend`), execute **`start.bat`**. O script usa `python` ou `py` para servir a pasta na porta **5500** e abre o navegador em http://127.0.0.1:5500/ .
 
-   O script usa **Python** (`python` ou `py`) para rodar `http.server` na porta **5500**, espera um instante e **abre o navegador** em http://127.0.0.1:5500/ .
+## Se o `start.bat` não funcionar (execução manual)
 
-3. **Sem Windows ou sem `start.bat`:** na pasta do frontend:
+1. **Terminal** na pasta `filemanager.frontend` (onde está `index.html`).
+
+2. **Python** no PATH. Experimente, por esta ordem:
 
    ```bash
    python -m http.server 5500
    ```
 
-   Abra manualmente http://127.0.0.1:5500/ .
+   Se falhar:
+
+   ```bash
+   py -m http.server 5500
+   ```
+
+3. **Abrir no browser:** http://127.0.0.1:5500/
+
+4. **Parar o servidor:** `Ctrl+C` no terminal.
+
+**Nota:** Abrir só o `index.html` com `file://` pode fazer o `fetch` à API falhar; por isso convém sempre um servidor HTTP local como acima.
 
 ## Requisitos
 
 - Navegador moderno
-- **Python** no PATH (necessário para o `start.bat` e para o servidor acima)
-- Backend FileManager em execução antes de usar o site
-
-## Por que usar um servidor HTTP?
-
-Abrir o `index.html` via `file://` pode causar problemas com `fetch` na API. Servir a pasta em `http://127.0.0.1:5500` evita isso e espelha um uso mais próximo de produção.
+- Python no PATH (para o servidor HTTP local)
+- Backend FileManager a correr (por defeito em http://127.0.0.1:8000)
 
 ## Configuração da API
 
@@ -42,18 +47,18 @@ const CONFIG = {
 };
 ```
 
-`API_BASE_URL` deve ser a URL base do FastAPI (sem barra final). O token JWT fica em `localStorage` com a chave `TOKEN_KEY`.
+`API_BASE_URL` é a URL base do FastAPI (sem barra final). O JWT fica em `localStorage` com a chave `TOKEN_KEY`.
 
 ## Estrutura (SPA)
 
 | Recurso | Função |
 |---------|--------|
-| `index.html` | Única página: todas as “telas” e modais de arquivo |
-| `js/core.js` | `FM.showView('login' \| 'cadastro' \| 'files' \| 'users')`, `FM.initApp()` |
-| `js/layout.js` | Navbar; links com `data-fm-go` (sem navegação real) |
-| `css/styles.css`, `js/*.js` | Estilos e lógica por módulo |
+| `index.html` | Página única: vistas e modais |
+| `js/core.js` | `FM.showView(...)`, `FM.initApp()` |
+| `js/layout.js` | Navbar; `data-fm-go` |
+| `css/styles.css`, `js/*.js` | Estilos e lógica |
 
-Navegação interna: elementos com `data-fm-go="..."` disparam troca de view via JavaScript, **sem** alterar `location` ou hash.
+Navegação interna via `data-fm-go="..."` em JavaScript, sem alterar `location` ou hash.
 
 ## Depois do login
 
