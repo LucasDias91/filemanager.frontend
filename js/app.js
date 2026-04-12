@@ -120,13 +120,35 @@ const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao");
 
 document.querySelector("#tabela-arquivos tbody")?.addEventListener("click", (e) => {
   const btnBaixar = e.target.closest(".btn-baixar-arquivo");
-  const btnEdit = e.target.closest(".btn-editar-arquivo");
-  const btnExcluir = e.target.closest(".btn-excluir-arquivo");
-  const acaoDownload = btnBaixar || btnEdit || btnExcluir;
-  if (acaoDownload) {
-    fmDownloadBySecretKey(acaoDownload.dataset.secretKey);
+  if (btnBaixar) {
+    fmDownloadBySecretKey(btnBaixar.dataset.secretKey);
     return;
   }
+  const btnEdit = e.target.closest(".btn-editar-arquivo");
+  if (btnEdit) {
+    editingSecretKey = btnEdit.dataset.secretKey;
+    document.getElementById("modalUploadLabel").textContent = "Substituir arquivo";
+    document.getElementById("form-upload").reset();
+    document.getElementById("upload-alert").classList.add("d-none");
+    const info = document.getElementById("upload-edit-info");
+    const nome = btnEdit.dataset.fileName || "este arquivo";
+    if (info) {
+      info.innerHTML = `Substituindo o arquivo <strong>${FM.escapeHtml(nome)}</strong>. Escolha o novo arquivo e salve.`;
+      info.classList.remove("d-none");
+    }
+    const submitBtn = document.querySelector("#form-upload button[type='submit']");
+    if (submitBtn) submitBtn.textContent = "Substituir";
+    fmGetModalUpload()?.show();
+    return;
+  }
+  const btn = e.target.closest(".btn-excluir-arquivo");
+  if (!btn || !excluirArquivoAlertEl) return;
+  pendingDeleteSecretKey = btn.dataset.secretKey;
+  const nome = btn.dataset.fileName || "este arquivo";
+  excluirArquivoAlertEl.classList.remove("alert-danger");
+  excluirArquivoAlertEl.classList.add("alert-warning");
+  excluirArquivoAlertEl.innerHTML = `<strong>Atenção:</strong> deseja excluir <strong>${FM.escapeHtml(nome)}</strong>? Esta ação não pode ser desfeita.`;
+  fmGetModalExcluirArquivo()?.show();
 });
 
 btnConfirmarExclusao?.addEventListener("click", async () => {
