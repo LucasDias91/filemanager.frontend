@@ -69,7 +69,7 @@ async function loadFiles() {
         ? `<a href="${FM.escapeAttr(openUrl)}" target="_blank" rel="noopener noreferrer">${nomeArquivo}</a>`
         : nomeArquivo;
       tr.innerHTML = `
-        <td>${nomeCelula}</td>
+        <td class="fm-col-nome"><span class="fm-nome-clip">${nomeCelula}</span></td>
         <td>${FM.escapeHtml(f.content_type || "—")}</td>
         <td>${FM.formatBytes(f.size)}</td>
         <td>${FM.formatDate(f.create_at)}</td>

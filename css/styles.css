@@ -44,6 +44,23 @@ body.fm-auth {
   border-bottom-width: 1px;
 }
 
+#tabela-arquivos th.fm-col-nome,
+#tabela-arquivos td.fm-col-nome {
+  max-width: 220px;
+}
+
+#tabela-arquivos .fm-nome-clip {
+  display: block;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+#tabela-arquivos .fm-nome-clip a {
+  display: inline;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .fm-table code {
   font-size: 0.7rem;
   word-break: break-all;
