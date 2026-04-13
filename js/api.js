@@ -1,5 +1,8 @@
 function getToken() {
-  return localStorage.getItem(CONFIG.TOKEN_KEY);
+  const raw = localStorage.getItem(CONFIG.TOKEN_KEY);
+  if (raw == null) return null;
+  const t = String(raw).trim();
+  return t ? t : null;
 }
 
 function setToken(token) {
@@ -47,21 +50,33 @@ function fmEndLoading() {
   }
 }
 
+function fmBuildAuthFetch(path, options = {}) {
+  const headers = options.headers ? new Headers(options.headers) : new Headers();
+  const token = getToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  if (options.body && !(options.body instanceof FormData)) {
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+  }
+  const url = `${CONFIG.API_BASE_URL}${path}`;
+  const init = {
+    method: options.method || "GET",
+    headers,
+    body: options.body,
+    signal: options.signal,
+    cache: options.cache,
+  };
+  return [url, init];
+}
+
 async function apiFetch(path, options = {}) {
   fmBeginLoading();
   try {
-    const headers = { ...(options.headers || {}) };
-    const token = getToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-    if (options.body && !(options.body instanceof FormData)) {
-      headers["Content-Type"] = "application/json";
-    }
-    const res = await fetch(`${CONFIG.API_BASE_URL}${path}`, {
-      ...options,
-      headers,
-    });
+    const [url, init] = fmBuildAuthFetch(path, options);
+    const res = await fetch(url, init);
     const text = await res.text();
     let data = null;
     if (text) {
@@ -83,6 +98,40 @@ async function apiFetch(path, options = {}) {
       throw err;
     }
     return data;
+  } finally {
+    fmEndLoading();
+  }
+}
+
+async function apiFetchResponse(path, options = {}) {
+  fmBeginLoading();
+  try {
+    const [url, init] = fmBuildAuthFetch(path, {
+      ...options,
+      cache: options.cache ?? "no-store",
+    });
+    const res = await fetch(url, init);
+    if (!res.ok) {
+      const text = await res.text();
+      let data = null;
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = text;
+        }
+      }
+      const detail =
+        typeof data === "object" && data !== null && data.detail !== undefined
+          ? Array.isArray(data.detail)
+            ? data.detail.map((d) => d.msg || d).join(", ")
+            : String(data.detail)
+          : res.statusText;
+      const err = new Error(detail || `HTTP ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    return res;
   } finally {
     fmEndLoading();
   }

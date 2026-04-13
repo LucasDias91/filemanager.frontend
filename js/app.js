@@ -4,17 +4,39 @@ const ICON_LAPIS = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="1
 
 const ICON_DOWNLOAD = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>`;
 
-function fmDownloadBySecretKey(secretKey) {
+async function fmDownloadBySecretKey(secretKey) {
   if (!secretKey || typeof CONFIG === "undefined") return;
-  const url = `${CONFIG.API_BASE_URL}/api/files/download?${new URLSearchParams({ key: secretKey })}`;
-  const a = document.createElement("a");
-  a.href = url;
-  a.rel = "noopener";
-  a.target = "_blank";
-  a.setAttribute("download", "");
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  if (!FM.requireAuth()) return;
+  try {
+    const path = `/api/files/download?${new URLSearchParams({ key: secretKey })}`;
+    const res = await apiFetchResponse(path);
+    const blob = await res.blob();
+    const cd = res.headers.get("Content-Disposition");
+    let filename = "arquivo";
+    if (cd) {
+      const mStar = cd.match(/filename\*=UTF-8''([^;\s]+)/i);
+      const mQuot = cd.match(/filename="([^"]+)"/i);
+      if (mStar) {
+        try {
+          filename = decodeURIComponent(mStar[1]);
+        } catch {
+          filename = mStar[1];
+        }
+      } else if (mQuot) filename = mQuot[1];
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.rel = "noopener";
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    if (FM.redirectOnUnauthorized(err)) return;
+    alert(err.message || "Não foi possível baixar o arquivo.");
+  }
 }
 
 let pendingDeleteSecretKey = null;
@@ -122,7 +144,7 @@ const btnConfirmarExclusao = document.getElementById("btn-confirmar-exclusao");
 document.querySelector("#tabela-arquivos tbody")?.addEventListener("click", (e) => {
   const btnBaixar = e.target.closest(".btn-baixar-arquivo");
   if (btnBaixar) {
-    fmDownloadBySecretKey(btnBaixar.dataset.secretKey);
+    void fmDownloadBySecretKey(btnBaixar.dataset.secretKey);
     return;
   }
   const btnEdit = e.target.closest(".btn-editar-arquivo");
